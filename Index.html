@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Slide</title>
+<style>
+  @font-face {
+    font-family: 'system-slab';
+    src: local('Georgia');
+  }
+
+  :root {
+    --board: #2B2D31;
+    --board-deep: #201F22;
+    --tile: #EDE8DC;
+    --tile-shadow: #B9B3A2;
+    --accent: #C8553D;
+    --sage: #7A9B76;
+    --ink: #2B2D31;
+    --paper: #F4F1EA;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--paper);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    justify-content: space-between;
+    padding: 0 20px;
+  }
+
+  header {
+    width: 100%;
+    text-align: center;
+    padding-top: max(28px, env(safe-area-inset-top));
+  }
+
+  h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: -0.5px;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .subtitle {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tile-shadow);
+    margin-top: 4px;
+  }
+
+  .stats {
+    display: flex;
+    gap: 28px;
+    margin: 18px 0 16px;
+    font-family: 'SF Mono', 'Courier New', monospace;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat .num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .stat .label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tile-shadow);
+    margin-top: 3px;
+  }
+
+  .board-frame {
+    background: linear-gradient(145deg, var(--board), var(--board-deep));
+    border-radius: 18px;
+    padding: 12px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.08) inset,
+      0 14px 30px rgba(0,0,0,0.25),
+      0 2px 4px rgba(0,0,0,0.2);
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 400px;
+  }
+
+  .board {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: var(--board-deep);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  .tile {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, var(--tile), #E2DCCC);
+    border-radius: 8px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 -2px 4px rgba(0,0,0,0.08) inset,
+      0 3px 0 var(--tile-shadow),
+      0 6px 10px rgba(0,0,0,0.35);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    color: var(--ink);
+    transition: top 0.16s cubic-bezier(.2,.8,.3,1), left 0.16s cubic-bezier(.2,.8,.3,1);
+    cursor: pointer;
+  }
+
+  .tile::after {
+    content: '';
+    position: absolute;
+    inset: 6%;
+    border-radius: 5px;
+    border: 1px solid rgba(43,45,49,0.08);
+    pointer-events: none;
+  }
+
+  .tile.moving {
+    transition: top 0.1s ease-out, left 0.1s ease-out;
+  }
+
+  .tile.solved-flash {
+    background: linear-gradient(160deg, var(--sage), #6a8a66);
+    color: var(--paper);
+  }
+
+  footer {
+    width: 100%;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .scramble-btn {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 14px 30px;
+    border-radius: 30px;
+    box-shadow: 0 3px 0 #15161a, 0 6px 12px rgba(0,0,0,0.2);
+    -webkit-appearance: none;
+  }
+
+  .scramble-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #15161a, 0 3px 6px rgba(0,0,0,0.2);
+  }
+
+  .win-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43,45,49,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 10;
+  }
+
+  .win-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .win-overlay h2 {
+    font-family: Georgia, serif;
+    color: var(--paper);
+    font-size: 38px;
+    margin: 0 0 6px;
+  }
+
+  .win-overlay p {
+    font-family: 'SF Mono', monospace;
+    color: var(--sage);
+    font-size: 14px;
+    letter-spacing: 1px;
+    margin: 0 0 30px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Slide</h1>
+    <div class="subtitle">15-piece puzzle</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="num" id="moveCount">0</div>
+      <div class="label">Moves</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="timeCount">0:00</div>
+      <div class="label">Time</div>
+    </div>
+  </div>
+
+  <div class="board-frame">
+    <div class="board" id="board"></div>
+  </div>
+
+  <footer>
+    <button class="scramble-btn" id="scrambleBtn">Shuffle</button>
+  </footer>
+</div>
+
+<div class="win-overlay" id="winOverlay">
+  <h2>Solved</h2>
+  <p id="winStats">— moves · —</p>
+  <button class="scramble-btn" id="playAgainBtn">Play Again</button>
+</div>
+
+<script>
+(function() {
+  const SIZE = 4;
+  const TOTAL = SIZE * SIZE;
+  const board = document.getElementById('board');
+  const moveCountEl = document.getElementById('moveCount');
+  const timeCountEl = document.getElementById('timeCount');
+  const scrambleBtn = document.getElementById('scrambleBtn');
+  const winOverlay = document.getElementById('winOverlay');
+  const winStats = document.getElementById('winStats');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  let tiles = [];       // tiles[i] = value at position i (0 = blank), position i = row*SIZE+col
+  let tileEls = {};     // value -> DOM element
+  let moves = 0;
+  let startTime = null;
+  let timerInterval = null;
+  let solved = false;
+  let gap = 0;          // px gap between tiles
+  let cellSize = 0;
+
+  function solvedState() {
+    const arr = [];
+    for (let i = 1; i < TOTAL; i++) arr.push(i);
+    arr.push(0);
+    return arr;
+  }
+
+  function isSolved(arr) {
+    for (let i = 0; i < TOTAL; i++) {
+      if (arr[i] !== solvedState()[i]) return false;
+    }
+    return true;
+  }
+
+  function computeSizes() {
+    const rect = board.getBoundingClientRect();
+    gap = rect.width * 0.025;
+    cellSize = (rect.width - gap * (SIZE + 1)) / SIZE;
+  }
+
+  function posToXY(pos) {
+    const row = Math.floor(pos / SIZE);
+    const col = pos % SIZE;
+    return {
+      x: gap + col * (cellSize + gap),
+      y: gap + row * (cellSize + gap)
+    };
+  }
+
+  function buildTiles() {
+    board.innerHTML = '';
+    tileEls = {};
+    for (let v = 1; v < TOTAL; v++) {
+      const el = document.createElement('div');
+      el.className = 'tile';
+      el.textContent = v;
+      el.style.width = cellSize + 'px';
+      el.style.height = cellSize + 'px';
+      el.style.fontSize = (cellSize * 0.4) + 'px';
+      el.addEventListener('click', () => attemptMove(v));
+      attachSwipe(el, v);
+      board.appendChild(el);
+      tileEls[v] = el;
+    }
+  }
+
+  function render() {
+    for (let pos = 0; pos < TOTAL; pos++) {
+      const v = tiles[pos];
+      if (v === 0) continue;
+      const { x, y } = posToXY(pos);
+      const el = tileEls[v];
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+    }
+  }
+
+  function findBlank() {
+    return tiles.indexOf(0);
+  }
+
+  function attachSwipe(el, value) {
+    let startX = 0, startY = 0, tracking = false;
+
+    el.addEventListener('touchstart', (e) => {
+      if (solved) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    }, { passive: true });
+
+    el.addEventListener('touchend', (e) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      const threshold = 12; // small movement still counts as a swipe
+
+      if (absX < threshold && absY < threshold) {
+        // treat as a tap
+        attemptMove(value);
+        return;
+      }
+
+      let dir;
+      if (absX > absY) {
+        dir = dx > 0 ? 'right' : 'left';
+      } else {
+        dir = dy > 0 ? 'down' : 'up';
+      }
+      attemptSwipeMove(value, dir);
+    }, { passive: true });
+  }
+
+  function attemptSwipeMove(value, dir) {
+    if (solved) return;
+    const pos = tiles.indexOf(value);
+    const blank = findBlank();
+    const pr = Math.floor(pos / SIZE), pc = pos % SIZE;
+    const br = Math.floor(blank / SIZE), bc = blank % SIZE;
+
+    // The blank must be exactly in the direction swiped, adjacent to the tile
+    let valid = false;
+    if (dir === 'left' && pr === br && bc === pc - 1) valid = true;
+    if (dir === 'right' && pr === br && bc === pc + 1) valid = true;
+    if (dir === 'up' && pc === bc && br === pr - 1) valid = true;
+    if (dir === 'down' && pc === bc && br === pr + 1) valid = true;
+
+    if (valid) attemptMove(value);
+  }
+
+  function canMove(pos) {
+    const blank = findBlank();
+    const pr = Math.floor(pos / SIZE), pc = pos % SIZE;
+    const br = Math.floor(blank / SIZE), bc = blank % SIZE;
+    return (pr === br && Math.abs(pc - bc) === 1) || (pc === bc && Math.abs(pr - br) === 1);
+  }
+
+  function attemptMove(value) {
+    if (solved) return;
+    const pos = tiles.indexOf(value);
+    if (!canMove(pos)) return;
+
+    const blank = findBlank();
+    tiles[blank] = value;
+    tiles[pos] = 0;
+
+    moves++;
+    moveCountEl.textContent = moves;
+
+    if (!startTime) startTimer();
+
+    const el = tileEls[value];
+    el.classList.add('moving');
+    render();
+    setTimeout(() => el.classList.remove('moving'), 150);
+
+    if (isSolved(tiles)) {
+      setTimeout(onWin, 200);
+    }
+  }
+
+  function startTimer() {
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      timeCountEl.textContent = m + ':' + String(s).padStart(2, '0');
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+  }
+
+  function onWin() {
+    solved = true;
+    stopTimer();
+    Object.values(tileEls).forEach(el => el.classList.add('solved-flash'));
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    winStats.textContent = moves + ' moves · ' + m + ':' + String(s).padStart(2, '0');
+    setTimeout(() => winOverlay.classList.add('show'), 300);
+  }
+
+  function shuffle() {
+    let arr = solvedState();
+    // perform random valid moves from solved state to guarantee solvability
+    let blank = TOTAL - 1;
+    let lastMoved = -1;
+    const movesToMake = 150;
+    for (let i = 0; i < movesToMake; i++) {
+      const br = Math.floor(blank / SIZE), bc = blank % SIZE;
+      const neighbors = [];
+      if (br > 0) neighbors.push(blank - SIZE);
+      if (br < SIZE - 1) neighbors.push(blank + SIZE);
+      if (bc > 0) neighbors.push(blank - 1);
+      if (bc < SIZE - 1) neighbors.push(blank + 1);
+      const options = neighbors.filter(n => n !== lastMoved);
+      const choice = options[Math.floor(Math.random() * options.length)];
+      arr[blank] = arr[choice];
+      arr[choice] = 0;
+      lastMoved = blank;
+      blank = choice;
+    }
+    return arr;
+  }
+
+  function newGame() {
+    solved = false;
+    moves = 0;
+    startTime = null;
+    stopTimer();
+    moveCountEl.textContent = '0';
+    timeCountEl.textContent = '0:00';
+    winOverlay.classList.remove('show');
+
+    tiles = shuffle();
+
+    computeSizes();
+    buildTiles();
+    render();
+  }
+
+  // keyboard support (for testing on desktop)
+  document.addEventListener('keydown', (e) => {
+    if (solved) return;
+    const blank = findBlank();
+    const br = Math.floor(blank / SIZE), bc = blank % SIZE;
+    let target = -1;
+    if (e.key === 'ArrowUp' && br < SIZE - 1) target = blank + SIZE;
+    if (e.key === 'ArrowDown' && br > 0) target = blank - SIZE;
+    if (e.key === 'ArrowLeft' && bc < SIZE - 1) target = blank + 1;
+    if (e.key === 'ArrowRight' && bc > 0) target = blank - 1;
+    if (target >= 0) attemptMove(tiles[target]);
+  });
+
+  scrambleBtn.addEventListener('click', newGame);
+  playAgainBtn.addEventListener('click', newGame);
+
+  window.addEventListener('resize', () => {
+    computeSizes();
+    Object.entries(tileEls).forEach(([v, el]) => {
+      el.style.width = cellSize + 'px';
+      el.style.height = cellSize + 'px';
+      el.style.fontSize = (cellSize * 0.4) + 'px';
+    });
+    render();
+  });
+
+  newGame();
+})();
+</script>
+
+</body>
+</html>
